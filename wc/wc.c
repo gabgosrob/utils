@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
     }
 
     FILE *file;
-    if (filepath == NULL)
+    if (!filepath)
     {
         file = stdin;
     }
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
         file = fopen(filepath, "rb");
     }
 
-    if (file == NULL)
+    if (!file)
     {
         printf("Could not find the specified file.\n");
         exit(-1);
