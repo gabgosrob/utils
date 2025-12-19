@@ -7,6 +7,7 @@
 #include "priority_queue.h"
 #include "stack.h"
 #include "bit_state.h"
+#include "bit_writer.h"
 
 #define SYMBOL_COUNT (UCHAR_MAX + 1)
 
@@ -41,6 +42,7 @@ int main()
     PqNode *pq_root = NULL;
     for (int i = 0; i < SYMBOL_COUNT; i++)
     {
+        // only create node if there are those chars in the file
         if (frequencies[i] > 0)
         {
             PqNode *node = pq_create_node(frequencies[i], frequency_nodes[i]);
@@ -106,5 +108,50 @@ int main()
     }
     bt_free_tree(huffman_root);
 
+    FILE *compressed_file = fopen("out.smol", "wb");
+    if (!compressed_file)
+    {
+        printf("Error creating compressed file.");
+        exit(-1);
+    }
+
+    // write header to compressed file
+    // TODO: write original file byte size (used in decoding to know when to stop)
+    uint16_t number_of_symbols = 0;
+    for (int i = 0; i < SYMBOL_COUNT; i++)
+    {
+        if (char_to_bitmap[i].len > 0)
+        {
+            number_of_symbols++;
+        }
+    }
+    fwrite(&number_of_symbols, sizeof(number_of_symbols), 1, compressed_file);
+    for (int i = 0; i < SYMBOL_COUNT; i++)
+    {
+        if (char_to_bitmap[i].len > 0)
+        {
+            unsigned char curr_char = i;
+            uint8_t len = char_to_bitmap[i].len;
+            uint64_t bits = char_to_bitmap[i].bits;
+            fwrite(&curr_char, sizeof(curr_char), 1, compressed_file);
+            fwrite(&len, sizeof(len), 1, compressed_file);
+            fwrite(&bits, sizeof(bits), 1, compressed_file);
+        }
+    }
+
+    // write compressed data
+    BitWriter *bit_writer = bw_create_bit_writer(compressed_file);
+    rewind(file);
+    c = fgetc(file);
+    while (c != EOF)
+    {
+        bw_write_bits(bit_writer, char_to_bitmap[c]);
+        c = fgetc(file);
+    }
+    bw_flush_buffer(bit_writer);
+
+    // TODO: implement decoding
+
     fclose(file);
+    fclose(compressed_file);
 }
