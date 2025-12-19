@@ -55,9 +55,8 @@ int main()
         BtNode *big_node = pq_pop_min(&pq_root);
 
         unsigned long frequency_sum = small_node->value + big_node->value;
-        // create parent with some char
-        // doesnt matter because only leaf
-        // nodes care about their char
+        // char doesnt matter because only leaf nodes
+        // care about their char
         BtNode *new_parent = bt_create_node(0, frequency_sum);
         new_parent->left = small_node;
         new_parent->right = big_node;
@@ -81,6 +80,11 @@ int main()
 
         if (bt_is_leaf(node))
         {
+            // in case first node is a leaf (only 1 symbol in tree)
+            if (state->bits.len == 0)
+            {
+                state->bits.len = 1;
+            }
             char_to_bitmap[node->character] = state->bits;
         }
         else
@@ -100,6 +104,7 @@ int main()
         }
         free(state);
     }
+    bt_free_tree(huffman_root);
 
     fclose(file);
 }
