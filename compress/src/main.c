@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <limits.h>
 #include <stdint.h>
+#include <time.h>
+#include <sys/stat.h>
 #include "binary_tree.h"
 #include "priority_queue.h"
 #include "stack.h"
@@ -11,10 +13,9 @@
 
 #define SYMBOL_COUNT (UCHAR_MAX + 1)
 
-int main()
+void compress(char *filepath)
 {
-    // TODO: Change this to argv param input
-    char *filepath = "test.txt";
+    clock_t t = clock();
 
     FILE *file = fopen(filepath, "rb");
     if (!file)
@@ -24,10 +25,12 @@ int main()
     }
 
     unsigned long frequencies[SYMBOL_COUNT] = {0};
+    uint64_t original_byte_count = 0;
     int c = fgetc(file);
     while (c != EOF)
     {
         frequencies[c]++;
+        original_byte_count++;
         c = fgetc(file);
     }
 
@@ -108,7 +111,9 @@ int main()
     }
     bt_free_tree(huffman_root);
 
-    FILE *compressed_file = fopen("out.smol", "wb");
+    char compressed_file_name[512];
+    snprintf(compressed_file_name, sizeof(compressed_file_name), "%s.smol", filepath);
+    FILE *compressed_file = fopen(compressed_file_name, "wb");
     if (!compressed_file)
     {
         printf("Error creating compressed file.");
@@ -149,9 +154,30 @@ int main()
         c = fgetc(file);
     }
     bw_flush_buffer(bit_writer);
+    uint64_t compressed_byte_count = bit_writer->written_bites;
 
-    // TODO: implement decoding
+    // print out stats
+    t = clock() - t;
+    double time_taken_s = ((double)t) / CLOCKS_PER_SEC;
+    printf("Compression complete in %.3fs.\n", time_taken_s);
+    printf("Space saved: %.2f%%\n\n", (1.0 - (double)compressed_byte_count / (double)original_byte_count) * 100.0);
 
     fclose(file);
     fclose(compressed_file);
+}
+
+void uncompress(char *filepath)
+{
+    // TODO: implement decoding
+
+    // check if file is a .smol file
+}
+
+int main()
+{
+    // TODO: Change this to argv param input that takes
+    // an input file name and output file name
+    // -c = compress
+    // -u = uncompress
+    compress("test.txt");
 }

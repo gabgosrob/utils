@@ -12,6 +12,7 @@ BitWriter *bw_create_bit_writer(FILE *file)
     bit_writer->file = file;
     bit_writer->buffer = 0;
     bit_writer->len = 0;
+    bit_writer->written_bites = 0;
 
     return bit_writer;
 }
@@ -28,12 +29,13 @@ void bw_write_bits(BitWriter *bit_writer, BitMap bit_map)
         bit_writer->buffer = (bit_writer->buffer << 1) | bit;
         bit_writer->len++;
 
-        // write and flush buffer when full
+        // write and clear buffer when full
         if (bit_writer->len == 8)
         {
             fwrite(&bit_writer->buffer, sizeof(bit_writer->buffer), 1, bit_writer->file);
             bit_writer->buffer = 0;
             bit_writer->len = 0;
+            bit_writer->written_bites++;
         }
     }
 }
@@ -48,5 +50,6 @@ void bw_flush_buffer(BitWriter *bit_writer)
         fwrite(&bit_writer->buffer, sizeof(bit_writer->buffer), 1, bit_writer->file);
         bit_writer->buffer = 0;
         bit_writer->len = 0;
+        bit_writer->written_bites++;
     }
 }

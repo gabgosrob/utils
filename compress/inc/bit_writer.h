@@ -10,6 +10,7 @@ typedef struct BitWriter
     FILE *file;
     uint8_t buffer;
     uint8_t len;
+    uint64_t written_bites;
 } BitWriter;
 
 BitWriter *bw_create_bit_writer(FILE *file);
