@@ -43,6 +43,7 @@ void bw_flush_buffer(BitWriter *bit_writer)
     if (bit_writer->len != 0)
     {
         uint8_t missing_bits = 8 - bit_writer->len;
+        // add missing bits to buffer
         bit_writer->buffer = bit_writer->buffer << missing_bits;
         fwrite(&bit_writer->buffer, sizeof(bit_writer->buffer), 1, bit_writer->file);
         bit_writer->buffer = 0;
