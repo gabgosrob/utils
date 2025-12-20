@@ -154,7 +154,7 @@ void compress(char *filepath)
         c = fgetc(file);
     }
     bw_flush_buffer(bit_writer);
-    uint64_t compressed_byte_count = bit_writer->written_bites;
+    uint64_t compressed_byte_count = bit_writer->written_bytes;
     free(bit_writer);
 
     // print out stats
