@@ -4,7 +4,6 @@
 #include <limits.h>
 #include <stdint.h>
 #include <time.h>
-#include <sys/stat.h>
 #include "binary_tree.h"
 #include "priority_queue.h"
 #include "stack.h"
@@ -155,15 +154,17 @@ void compress(char *filepath)
     }
     bw_flush_buffer(bit_writer);
     uint64_t compressed_byte_count = bit_writer->written_bites;
+    free(bit_writer);
 
     // print out stats
     t = clock() - t;
     double time_taken_s = ((double)t) / CLOCKS_PER_SEC;
     printf("Compression complete in %.3fs.\n", time_taken_s);
-    printf("Space saved: %.2f%%\n\n", (1.0 - (double)compressed_byte_count / (double)original_byte_count) * 100.0);
+    printf("Space saved: %.2f%%\n", (1.0 - (double)compressed_byte_count / (double)original_byte_count) * 100.0);
 
     fclose(file);
     fclose(compressed_file);
+    // TODO: Move to a compression.c file and import here instead
 }
 
 void uncompress(char *filepath)
@@ -171,13 +172,55 @@ void uncompress(char *filepath)
     // TODO: implement decoding
 
     // check if file is a .smol file
+
+    // TODO: Move to a compression.c file and import here instead
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    // TODO: Change this to argv param input that takes
-    // an input file name and output file name
-    // -c = compress
-    // -u = uncompress
-    compress("test.txt");
+    int option;
+    int flag_c = 0;
+    int flag_u = 0;
+    int both_flags = 0;
+
+    while ((option = getopt(argc, argv, "cu")) != -1)
+    {
+        switch (option)
+        {
+        case 'c':
+            flag_c = 1;
+            break;
+        case 'u':
+            flag_u = 1;
+            break;
+        }
+    }
+    both_flags = flag_c && flag_u;
+
+    if (argc - optind != 1)
+    {
+        printf("You must provide exactly 1 file to compress or uncompress.\n");
+        exit(-1);
+    }
+    if (!flag_c && !flag_u)
+    {
+        printf("You must specify whether to compress or uncompress.\n");
+        exit(-1);
+    }
+    if (both_flags)
+    {
+        printf("Cannot compress and uncompress at the same time.\n");
+        exit(-1);
+    }
+
+    if (flag_c)
+    {
+        compress(argv[optind]);
+    }
+    else if (flag_u)
+    {
+        uncompress(argv[optind]);
+    }
+
+    return 0;
 }
