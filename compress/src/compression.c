@@ -119,7 +119,9 @@ void compress(char *filepath)
     }
 
     // write header to compressed file
-    // TODO: write original file byte size (used in decoding to know when to stop)
+    // header contains byte count, number of symbols, then blocks of
+    // char+len+bits for bitmap
+    fwrite(&original_byte_count, sizeof(original_byte_count), 1, compressed_file);
     uint16_t number_of_symbols = 0;
     for (int i = 0; i < SYMBOL_COUNT; i++)
     {
@@ -163,7 +165,6 @@ void compress(char *filepath)
 
     fclose(file);
     fclose(compressed_file);
-    // TODO: Move to a compression.c file and import here instead
 }
 
 void uncompress(char *filepath)
@@ -171,6 +172,4 @@ void uncompress(char *filepath)
     // TODO: implement decoding
 
     // check if file is a .smol file
-
-    // TODO: Move to a compression.c file and import here instead
 }
