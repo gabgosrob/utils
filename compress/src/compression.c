@@ -173,7 +173,12 @@ void uncompress(char *filepath)
 {
     clock_t t = clock();
 
-    // TODO:check if file is a .smol file
+    size_t filepath_len = strlen(filepath);
+    if (filepath_len < 5 || strcmp(filepath + filepath_len - 5, ".smol"))
+    {
+        printf("Can only uncompress .smol files compressed with this tool.");
+        exit(-1);
+    }
     FILE *file = fopen(filepath, "rb");
     if (!file)
     {
