@@ -3,11 +3,13 @@
 #include <limits.h>
 #include <stdint.h>
 #include <time.h>
+#include <string.h>
 #include "binary_tree.h"
 #include "priority_queue.h"
 #include "stack.h"
 #include "bit_state.h"
 #include "bit_writer.h"
+#include "bit_reader.h"
 
 #define SYMBOL_COUNT (UCHAR_MAX + 1)
 
@@ -169,7 +171,114 @@ void compress(char *filepath)
 
 void uncompress(char *filepath)
 {
-    // TODO: implement decoding
+    clock_t t = clock();
 
-    // check if file is a .smol file
+    // TODO:check if file is a .smol file
+    FILE *file = fopen(filepath, "rb");
+    if (!file)
+    {
+        printf("Error opening file.");
+        exit(-1);
+    }
+
+    // read header
+    BitMap char_to_bitmap[SYMBOL_COUNT] = {0};
+    uint64_t original_byte_count;
+    fread(&original_byte_count, sizeof(original_byte_count), 1, file);
+    uint16_t number_of_symbols;
+    fread(&number_of_symbols, sizeof(number_of_symbols), 1, file);
+    for (uint16_t i = 0; i < number_of_symbols; i++)
+    {
+        unsigned char curr_char;
+        uint8_t len;
+        uint64_t bits;
+        fread(&curr_char, sizeof(curr_char), 1, file);
+        fread(&len, sizeof(len), 1, file);
+        fread(&bits, sizeof(bits), 1, file);
+        char_to_bitmap[curr_char].len = len;
+        char_to_bitmap[curr_char].bits = bits;
+    }
+
+    // rebuild huffman tree
+    BtNode *huffman_root = bt_create_node(0, 0);
+    for (int c = 0; c < SYMBOL_COUNT; c++)
+    {
+        BtNode *curr_node = huffman_root;
+        BitMap bitmap = char_to_bitmap[c];
+        // only process chars that are in the file
+        if (bitmap.len > 0)
+        {
+            // iterate through bits in MSB order
+            for (int i = bitmap.len - 1; i >= 0; i--)
+            {
+                // get MSB
+                int bit = (bitmap.bits >> i) & 1;
+
+                if (bit == 0)
+                {
+                    if (!curr_node->left)
+                    {
+                        BtNode *new_node = bt_create_node(0, 0);
+                        curr_node->left = new_node;
+                    }
+                    curr_node = curr_node->left;
+                }
+                else if (bit == 1)
+                {
+                    if (!curr_node->right)
+                    {
+                        BtNode *new_node = bt_create_node(0, 0);
+                        curr_node->right = new_node;
+                    }
+                    curr_node = curr_node->right;
+                }
+            }
+            curr_node->character = c;
+        }
+    }
+
+    char uncompressed_file_name[512];
+    int new_file_len = (int)(strlen(filepath) - 5);
+    snprintf(uncompressed_file_name, sizeof(uncompressed_file_name), "%.*s", new_file_len, filepath);
+    FILE *uncompressed_file = fopen(uncompressed_file_name, "wb");
+    if (!uncompressed_file)
+    {
+        printf("Error creating uncompressed file");
+        exit(-1);
+    }
+
+    // uncompress by walking down huffman tree for every char
+    BitReader *bit_reader = br_create_bit_reader(file);
+    uint64_t written_bytes = 0;
+    BtNode *curr_node = huffman_root;
+    while (written_bytes < original_byte_count)
+    {
+        uint8_t bit = br_read_bit(bit_reader);
+        if (bit == 0)
+        {
+            curr_node = curr_node->left;
+        }
+        else if (bit == 1)
+        {
+            curr_node = curr_node->right;
+        }
+
+        if (bt_is_leaf(curr_node))
+        {
+
+            fwrite(&curr_node->character, sizeof(curr_node->character), 1, uncompressed_file);
+            written_bytes++;
+            curr_node = huffman_root;
+        }
+    }
+    bt_free_tree(huffman_root);
+    free(bit_reader);
+
+    // print out stats
+    t = clock() - t;
+    double time_taken_s = ((double)t) / CLOCKS_PER_SEC;
+    printf("Uncompression complete in %.3fs.\n", time_taken_s);
+
+    fclose(uncompressed_file);
+    fclose(file);
 }
