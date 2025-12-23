@@ -2,6 +2,39 @@
 #include <ws2tcpip.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
+
+struct client_args
+{
+    SOCKET sock;
+    struct sockaddr_in service;
+};
+
+void *handle_client_conn(void *client_args)
+{
+    struct client_args *args = client_args;
+    SOCKET client_sock = args->sock;
+    struct sockaddr_in client_service = args->service;
+    free(args);
+
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &client_service.sin_addr, client_ip, sizeof(client_ip));
+    unsigned short port = ntohs(client_service.sin_port);
+    printf("Accepted connection from: %s:%hu\n", client_ip, port);
+
+    // echo loop
+    char buffer[512];
+    int len = recv(client_sock, buffer, sizeof(buffer), 0);
+    while (len > 0)
+    {
+        send(client_sock, buffer, len, 0);
+        len = recv(client_sock, buffer, sizeof(buffer), 0);
+    }
+
+    printf("Client %s:%hu disconnected\n", client_ip, port);
+    closesocket(client_sock);
+    return NULL;
+}
 
 int main()
 {
@@ -47,21 +80,36 @@ int main()
     // loop for connections
     while (1)
     {
-        printf("Waiting for connections...\n");
+        // wait for a connection
         struct sockaddr_in client_service;
         int addr_len = sizeof(client_service);
-        SOCKET client = accept(sock, (struct sockaddr *)&client_service, &addr_len);
-        if (client == INVALID_SOCKET)
+        SOCKET client_sock = accept(sock, (struct sockaddr *)&client_service, &addr_len);
+        if (client_sock == INVALID_SOCKET)
         {
             printf("Error during socket accept\n");
             break;
         }
-        char client_ip[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, (struct sockaddr *)&client_service.sin_addr, client_ip, sizeof(client_ip));
-        unsigned short port = ntohs(client_service.sin_port);
 
-        printf("Accepted connection from: %s:%hu\n", client_ip, port);
-        closesocket(client);
+        // allocate args on heap to send to thread
+        struct client_args *args = malloc(sizeof(struct client_args));
+        if (!args)
+        {
+            closesocket(client_sock);
+            continue;
+        }
+        args->sock = client_sock;
+        args->service = client_service;
+
+        // create client connection thread;
+        pthread_t thread_id;
+        if (pthread_create(&thread_id, NULL, handle_client_conn, args) != 0)
+        {
+            printf("Error creating client connection thread");
+            closesocket(client_sock);
+            free(args);
+            continue;
+        }
+        pthread_detach(thread_id);
     }
 
     WSACleanup();
