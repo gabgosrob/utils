@@ -110,6 +110,7 @@ void tcp_server()
 
 void udp_server()
 {
+    // TODO: try to make this work with IPV6 (ncat default)
     // ipv4, tcp
     SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock == INVALID_SOCKET)
