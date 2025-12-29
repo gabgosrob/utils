@@ -23,7 +23,7 @@ void *handle_client_conn(void *client_args)
     unsigned short port = ntohs(client_service.sin_port);
     printf("Accepted connection from: %s:%hu\n", client_ip, port);
 
-    const char *body = "Mimine";
+    const char *body = "Mimine"; // TODO: change to actual file
     char res_buffer[256];
     snprintf(
         res_buffer,
