@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #define SERVER_PORT 80
+#define MAX_REQUEST_SIZE 8192
 
 struct client_args
 {
@@ -22,6 +23,61 @@ void *handle_client_conn(void *client_args)
     inet_ntop(AF_INET, &client_service.sin_addr, client_ip, sizeof(client_ip));
     unsigned short port = ntohs(client_service.sin_port);
     printf("Accepted connection from: %s:%hu\n", client_ip, port);
+
+    // loop to fill buffer until http request end marker (\r\n\r\n)
+    char buffer[MAX_REQUEST_SIZE];
+    int pos = 0;
+    int request_success = 0;
+    while (1)
+    {
+        if (pos >= MAX_REQUEST_SIZE - 1)
+        {
+            break;
+        }
+
+        int len = recv(client_sock, buffer + pos, MAX_REQUEST_SIZE - pos, 0);
+        if (len <= 0)
+        {
+            break;
+        }
+        int last_pos = pos;
+        pos += len;
+
+        // check for http request end marker
+        // start scanning at last pos - 3, in case last 3 bytes of
+        // previous request were \r\n\r and the current first is \n,
+        // which would mean the request header is fully read
+        int http_header_complete = 0;
+        int start = last_pos - 3;
+        if (start < 0)
+        {
+            start = 0;
+        }
+        for (int i = start; i + 3 < pos; i++)
+        {
+            if (buffer[i] == '\r' &&
+                buffer[i + 1] == '\n' &&
+                buffer[i + 2] == '\r' &&
+                buffer[i + 3] == '\n')
+            {
+                http_header_complete = 1;
+                break;
+            }
+        }
+        if (http_header_complete)
+        {
+            request_success = 1;
+            break;
+        }
+    }
+
+    if (!request_success)
+    {
+        printf("request invalid\n");
+        // TODO: send error to client and close connection
+    }
+
+    printf("this is the buffer\n%s\nthis was the buffer\n", buffer);
 
     const char *body = "Mimine"; // TODO: change to actual file
     char res_buffer[256];
