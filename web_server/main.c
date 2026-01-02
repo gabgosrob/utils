@@ -79,6 +79,9 @@ void *handle_client_conn(void *client_args)
         return NULL;
     }
 
+    // TODO: implement HTTP request parsing
+    // (check that the request is )
+
     const char *body = "Mimine"; // TODO: change to actual file
     char res_buffer[256];
     snprintf(
