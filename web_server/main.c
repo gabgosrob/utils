@@ -70,14 +70,14 @@ void *handle_client_conn(void *client_args)
             break;
         }
     }
-
     if (!request_success)
     {
         printf("request invalid\n");
-        // TODO: send error to client and close connection
+        char *error_message = "HTTP/1.1 400 Not Found";
+        send(client_sock, error_message, strlen(error_message), 0);
+        closesocket(client_sock);
+        return NULL;
     }
-
-    printf("this is the buffer\n%s\nthis was the buffer\n", buffer);
 
     const char *body = "Mimine"; // TODO: change to actual file
     char res_buffer[256];
