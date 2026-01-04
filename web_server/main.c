@@ -85,8 +85,6 @@ void *handle_client_conn(void *client_args)
     char *target = strtok(NULL, " ");
     char *protocol = strtok(NULL, "\r");
 
-    printf("%s, %s, %s\n", method, target, protocol);
-
     if (strcmp(method, "GET"))
     {
         char *error_message = "HTTP/1.1 405 Method Not Allowed";
