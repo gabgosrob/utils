@@ -2,6 +2,7 @@
 #include <ws2tcpip.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <string.h>
 
 #define SERVER_PORT 80
 #define MAX_REQUEST_SIZE 8192
@@ -35,7 +36,7 @@ void *handle_client_conn(void *client_args)
             break;
         }
 
-        int len = recv(client_sock, buffer + pos, MAX_REQUEST_SIZE - pos, 0);
+        int len = recv(client_sock, buffer + pos, MAX_REQUEST_SIZE - 1 - pos, 0);
         if (len <= 0)
         {
             break;
@@ -67,22 +68,43 @@ void *handle_client_conn(void *client_args)
         if (http_header_complete)
         {
             request_success = 1;
+            // null terminate to make a string
+            buffer[pos] = '\0';
             break;
         }
     }
     if (!request_success)
     {
-        printf("request invalid\n");
-        char *error_message = "HTTP/1.1 400 Not Found";
+        char *error_message = "HTTP/1.1 400 Bad Request";
         send(client_sock, error_message, strlen(error_message), 0);
         closesocket(client_sock);
         return NULL;
     }
 
-    // TODO: implement HTTP request parsing
-    // (check that the request is )
+    char *method = strtok(buffer, " ");
+    char *target = strtok(NULL, " ");
+    char *protocol = strtok(NULL, "\r");
 
-    const char *body = "Mimine"; // TODO: change to actual file
+    printf("%s, %s, %s\n", method, target, protocol);
+
+    if (strcmp(method, "GET"))
+    {
+        char *error_message = "HTTP/1.1 405 Method Not Allowed";
+        send(client_sock, error_message, strlen(error_message), 0);
+        closesocket(client_sock);
+        return NULL;
+    }
+    if (strcmp(protocol, "HTTP/1.1"))
+    {
+        char *error_message = "HTTP/1.1 505 HTTP Version Not Supported";
+        send(client_sock, error_message, strlen(error_message), 0);
+        closesocket(client_sock);
+        return NULL;
+    }
+
+    // TODO: try to open file at path, if exists then read and send (INSECURE)
+
+    const char *body = "Mimine";
     char res_buffer[256];
     snprintf(
         res_buffer,
