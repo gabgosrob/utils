@@ -1,3 +1,6 @@
 *.txt
 *.exe
 *.smol
+compile_commands.json
+/build/
+/out/
