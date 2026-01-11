@@ -3,9 +3,32 @@
 #include <math.h>
 #include <stdint.h>
 
+typedef enum {
+    NOTE_A = 0,
+    NOTE_As = 1,
+    NOTE_B = 2,
+    NOTE_C = -9,
+    NOTE_Cs = -8,
+    NOTE_D = -7,
+    NOTE_Ds = -6,
+    NOTE_E = -5,
+    NOTE_F = -4,
+    NOTE_Fs = -3,
+    NOTE_G = -2,
+    NOTE_Gs = -1,
+} Note;
+
 static const uint32_t FREQUENCY_HZ = 44100;
 static const uint32_t DURATION_S = 3;
 static const uint16_t CHANNELS = 2;
+
+float get_frequency(Note note, int octave) {
+    int octave_semitone_diff = 12 * (octave - 4);
+    int semitone_diff = note + octave_semitone_diff;
+    float frequency = 440.0f * powf(2.0f, (float)semitone_diff / 12);
+
+    return frequency;
+}
 
 void write_header(FILE *file) {
     uint16_t bits_per_sample = 16;
