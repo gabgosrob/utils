@@ -3,7 +3,8 @@
 #include <math.h>
 #include <stdint.h>
 
-typedef enum {
+typedef enum
+{
     NOTE_A = 0,
     NOTE_As = 1,
     NOTE_B = 2,
@@ -16,25 +17,41 @@ typedef enum {
     NOTE_Fs = -3,
     NOTE_G = -2,
     NOTE_Gs = -1,
+} Pitch;
+
+typedef struct Note
+{
+    Pitch pitch;
+    int octave;
+    float beats;
+    uint32_t frames;
 } Note;
 
-static const uint32_t FREQUENCY_HZ = 44100;
+static const int BPM = 120;
+static const uint32_t SAMPLE_RATE_HZ = 44100;
 static const uint32_t DURATION_S = 3;
-static const uint16_t CHANNELS = 2;
+static const uint16_t NB_CHANNELS = 2;
 
-float get_frequency(Note note, int octave) {
-    int octave_semitone_diff = 12 * (octave - 4);
-    int semitone_diff = note + octave_semitone_diff;
+float get_frequency(Note note)
+{
+    int octave_semitone_diff = 12 * (note.octave - 4);
+    int semitone_diff = note.pitch + octave_semitone_diff;
     float frequency = 440.0f * powf(2.0f, (float)semitone_diff / 12);
 
     return frequency;
 }
 
-void write_header(FILE *file) {
+float get_amplitude(Note note, float x)
+{
+    return 1.0f * sinf(2.0f * 3.1415926535f * get_frequency(note) * x);
+}
+
+void write_header(FILE *file, uint32_t total_frames)
+{
     uint16_t bits_per_sample = 16;
-    uint16_t bytes_per_block = CHANNELS * bits_per_sample / 8;
-    uint32_t bytes_per_sec = FREQUENCY_HZ * bytes_per_block;
-    uint32_t data_size = bytes_per_sec * DURATION_S;
+    uint16_t bytes_per_block = NB_CHANNELS * bits_per_sample / 8;
+    uint32_t bytes_per_sec = SAMPLE_RATE_HZ * bytes_per_block;
+    uint32_t data_size = bytes_per_block * total_frames;
     uint32_t file_size = data_size + 44 - 8; // add header and remove 8
     uint32_t chunk_size = 16;
     uint16_t data_format = 1; // pcm integer
@@ -48,8 +65,8 @@ void write_header(FILE *file) {
     fwrite("fmt ", 4, 1, file);
     fwrite(&chunk_size, sizeof(chunk_size), 1, file);
     fwrite(&data_format, sizeof(data_format), 1, file);
-    fwrite(&CHANNELS, sizeof(CHANNELS), 1, file);
-    fwrite(&FREQUENCY_HZ, sizeof(FREQUENCY_HZ), 1, file);
+    fwrite(&NB_CHANNELS, sizeof(NB_CHANNELS), 1, file);
+    fwrite(&SAMPLE_RATE_HZ, sizeof(SAMPLE_RATE_HZ), 1, file);
     fwrite(&bytes_per_sec, sizeof(bytes_per_sec), 1, file);
     fwrite(&bytes_per_block, sizeof(bytes_per_block), 1, file);
     fwrite(&bits_per_sample, sizeof(bits_per_sample), 1, file);
@@ -59,25 +76,53 @@ void write_header(FILE *file) {
     fwrite(&data_size, sizeof(data_size), 1, file);
 }
 
-int main() {
-    FILE *sound_file = fopen("sound.wav", "wb"); 
-    if (sound_file == NULL) {
+int main()
+{
+    FILE *sound_file = fopen("sound.wav", "wb");
+    if (sound_file == NULL)
+    {
         printf("Could not create sound file");
         return EXIT_FAILURE;
     }
 
-    write_header(sound_file);
+    Note song[] = {
+        {.pitch = NOTE_C, .octave = 4, .beats = 0.6f, .frames = 0},
+        {.pitch = NOTE_D, .octave = 4, .beats = 0.6f, .frames = 0},
+        {.pitch = NOTE_E, .octave = 4, .beats = 0.6f, .frames = 0},
+        {.pitch = NOTE_D, .octave = 4, .beats = 0.6f, .frames = 0},
+        {.pitch = NOTE_C, .octave = 4, .beats = 0.6f, .frames = 0}};
+    int NB_NOTES = sizeof(song) / sizeof(song[0]);
 
-    // write sampled data
-    uint32_t frames = FREQUENCY_HZ*DURATION_S;
-    for (uint32_t i = 0; i < frames; i++) {
-        float t = (float)i / FREQUENCY_HZ;
-        float y = 1.0f * sinf(2.0f * 3.14159265f * 440.0f * t);
-        int16_t pcm_integer_y = (int16_t)(INT16_MAX * y);
-        // printf("%i\n", pcm_integer_y);
-        fwrite(&pcm_integer_y, sizeof(pcm_integer_y), 1, sound_file); // right channel
-        fwrite(&pcm_integer_y, sizeof(pcm_integer_y), 1, sound_file); // left channel
+    float FRAMES_PER_BEAT = SAMPLE_RATE_HZ * 60.0f / BPM;
+    uint32_t total_frames = 0;
+    for (int n = 0; n < NB_NOTES; n++)
+    {
+        uint32_t note_frames = (uint32_t)(song[n].beats * FRAMES_PER_BEAT);
+        song[n].frames = note_frames;
+        total_frames += note_frames;
     }
 
+    write_header(sound_file, total_frames);
+
+    // write sampled data
+    uint32_t frame_counter = 0;
+    for (int n = 0; n < NB_NOTES; n++)
+    {
+        Note note = song[n];
+
+        for (uint32_t f = 0; f < note.frames; f++)
+        {
+            float t = (float)frame_counter / SAMPLE_RATE_HZ;
+            float y = get_amplitude(note, t);
+            int16_t pcm_integer_y = (int16_t)(INT16_MAX * y);
+            for (int c = 0; c < NB_CHANNELS; c++)
+            {
+                fwrite(&pcm_integer_y, sizeof(pcm_integer_y), 1, sound_file);
+            }
+            frame_counter++;
+        }
+    }
+
+    fclose(sound_file);
     return EXIT_SUCCESS;
 }
