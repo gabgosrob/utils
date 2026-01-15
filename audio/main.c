@@ -27,7 +27,7 @@ typedef struct Note
     uint32_t frames;
 } Note;
 
-static const int BPM = 120;
+static const int BPM = 240;
 static const uint32_t SAMPLE_RATE_HZ = 44100;
 static const uint32_t DURATION_S = 3;
 static const uint16_t NB_CHANNELS = 2;
@@ -86,11 +86,16 @@ int main()
     }
 
     Note song[] = {
-        {.pitch = NOTE_C, .octave = 4, .beats = 0.6f, .frames = 0},
-        {.pitch = NOTE_D, .octave = 4, .beats = 0.6f, .frames = 0},
-        {.pitch = NOTE_E, .octave = 4, .beats = 0.6f, .frames = 0},
-        {.pitch = NOTE_D, .octave = 4, .beats = 0.6f, .frames = 0},
-        {.pitch = NOTE_C, .octave = 4, .beats = 0.6f, .frames = 0}};
+        {.pitch = NOTE_C, .octave = 4, .beats = 1.0f, .frames = 0},
+        {.pitch = NOTE_F, .octave = 4, .beats = 1.0f, .frames = 0},
+        {.pitch = NOTE_G, .octave = 4, .beats = 1.0f, .frames = 0},
+        {.pitch = NOTE_A, .octave = 4, .beats = 5.0f, .frames = 0},
+        {.pitch = NOTE_As, .octave = 4, .beats = 1.0f, .frames = 0},
+        {.pitch = NOTE_G, .octave = 4, .beats = 1.0f, .frames = 0},
+        {.pitch = NOTE_A, .octave = 4, .beats = 1.0f, .frames = 0},
+        {.pitch = NOTE_F, .octave = 4, .beats = 4.0f, .frames = 0},
+        {.pitch = NOTE_F, .octave = 5, .beats = 0.6f, .frames = 0},
+    }; // song credits to coco!
     int NB_NOTES = sizeof(song) / sizeof(song[0]);
 
     float FRAMES_PER_BEAT = SAMPLE_RATE_HZ * 60.0f / BPM;
